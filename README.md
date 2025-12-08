@@ -10,6 +10,8 @@ A simple Rust library to connect to a MongoDB database and perform basic operati
 * Update one or many documents with optional upsert.
 * Delete one or many documents.
 
+(Check example code)
+
 ### Add to `Cargo.toml`
 
 For implementing the library in projects:
