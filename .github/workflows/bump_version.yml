@@ -1,0 +1,54 @@
+name: Bump Patch Version
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  bump:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract current version from Cargo.toml
+        id: get_version
+        run: |
+          VERSION=$(grep '^version' Cargo.toml | sed -E 's/version = "([^"]+)"/\1/')
+          echo "current=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Calculate next patch version
+        id: bump
+        run: |
+          IFS='.' read -r major minor patch <<< "${{ steps.get_version.outputs.current }}"
+          patch=$((patch + 1))
+          new_version="$major.$minor.$patch"
+          echo "new=$new_version" >> $GITHUB_OUTPUT
+
+      - name: Update Cargo.toml with new version
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${{ steps.bump.outputs.new }}\"/" Cargo.toml
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git commit -am "Bump version to ${{ steps.bump.outputs.new }}" || echo "No changes"
+          git push
+
+      - name: Create Git tag
+        run: |
+          git tag v${{ steps.bump.outputs.new }}
+          git push origin v${{ steps.bump.outputs.new }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.bump.outputs.new }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
