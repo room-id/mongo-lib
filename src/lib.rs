@@ -85,4 +85,25 @@ impl MongoLib {
         let result = self.collection.delete_many(filter).await?;
         Ok(result.deleted_count)
     }
+
+    pub async fn aggregate_json(&self, pipeline: Value) -> Result<Value> {
+        let stages = match pipeline {
+            Value::Array(arr) => arr,
+            _ => anyhow::bail!("aggregate_json expects a JSON array pipeline"),
+        };
+
+        let pipeline_docs: Vec<Document> = stages
+            .into_iter()
+            .map(|v| bson::to_document(&v))
+            .collect::<std::result::Result<_, _>>()?;
+
+        let mut cursor = self.collection.aggregate(pipeline_docs).await?;
+        let mut results = vec![];
+
+        while let Some(doc) = cursor.try_next().await? {
+            results.push(bson::from_document::<Value>(doc)?);
+        }
+
+        Ok(Value::Array(results))
+    }
 }
