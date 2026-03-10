@@ -112,4 +112,16 @@ impl MongoLib {
         let count = self.collection.count_documents(filter).await?;
         Ok(count)
     }
+
+    pub async fn distinct_json(&self, field: &str, query: Value) -> Result<Value> {
+        let filter = bson::to_document(&query)?;
+        let values = self.collection.distinct(field, filter).await?;
+
+        let json_values = values
+            .into_iter()
+            .map(serde_json::to_value)
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(Value::Array(json_values))
+    }
 }
