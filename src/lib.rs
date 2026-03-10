@@ -106,4 +106,10 @@ impl MongoLib {
 
         Ok(Value::Array(results))
     }
+
+    pub async fn count_json(&self, query: Value) -> Result<u64> {
+        let filter = bson::to_document(&query)?;
+        let count = self.collection.count_documents(filter).await?;
+        Ok(count)
+    }
 }
